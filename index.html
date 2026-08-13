@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Estaciones de Policía</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <h1>🚔 Estaciones de Policía Cercanas</h1>
+
+    <div class="panel">
+
+        <h2>📍 Ubicación</h2>
+
+        <p id="estado">
+            Presiona el botón para obtener tu ubicación.
+        </p>
+
+        <div class="coordenadas">
+
+            <div>
+
+                <label for="latitud">
+                    Latitud
+                </label>
+
+                <input
+                    type="number"
+                    id="latitud"
+                    step="any"
+                    placeholder="14.0723"
+                >
+
+            </div>
+
+            <div>
+
+                <label for="longitud">
+                    Longitud
+                </label>
+
+                <input
+                    type="number"
+                    id="longitud"
+                    step="any"
+                    placeholder="-87.1921"
+                >
+
+            </div>
+
+        </div>
+
+        <div class="botones">
+
+            <button
+                id="btnUbicacion"
+                onclick="usarUbicacion()"
+            >
+                📍 Usar mi ubicación
+            </button>
+
+            <button
+                onclick="mostrarCoordenadasEnMapa()"
+            >
+                📌 Mostrar coordenadas
+            </button>
+
+            <button
+                onclick="buscarEstaciones()"
+            >
+                🔎 Buscar estaciones
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div id="map"></div>
+
+
+    <div class="resultado-titulo">
+
+        <h2>🚔 3 estaciones más cercanas</h2>
+
+    </div>
+
+
+    <div id="resultados"></div>
+
+</div>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script
+    src="{{ url_for('static', filename='app.js') }}">
+</script>
+
+</body>
+
+</html>

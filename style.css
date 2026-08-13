@@ -1,0 +1,92 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+}
+
+.contenedor {
+    width: 90%;
+    max-width: 1200px;
+    margin: 30px auto;
+}
+
+h1 {
+    text-align: center;
+    color: #1e293b;
+}
+
+.panel {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+.coordenadas {
+    display: flex;
+    gap: 20px;
+}
+
+.coordenadas div {
+    flex: 1;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+}
+
+button {
+    margin-top: 20px;
+    margin-right: 10px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 7px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+#map {
+    height: 500px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+
+.estacion {
+    background: white;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.rapido {
+    background: #dcfce7;
+    padding: 10px;
+    border-radius: 7px;
+    font-weight: bold;
+}
+
+.ruta {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 7px;
+}
+
