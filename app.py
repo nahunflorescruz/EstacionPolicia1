@@ -1,9 +1,15 @@
-from flask import Flask, render_template, request, jsonify
+import streamlit as st
 import pandas as pd
 import math
 import requests
 
-app = Flask(__name__)
+st.title("Estación de Policía")
+
+# Carga de datos
+df = pd.read_csv("estaciones.csv")
+
+# Mostrar datos en pantalla
+st.dataframe(df)
 
 # Cargar estaciones
 try:
