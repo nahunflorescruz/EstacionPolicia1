@@ -1,34 +1,29 @@
-import streamlit as st
-import pandas as pd
 import math
+import pandas as pd
 import requests
+import streamlit as st
 
+# Título de la aplicación
 st.title("Estación de Policía")
 
-# Carga de datos
-df = pd.read_csv("estaciones.csv")
-
-# Mostrar datos en pantalla
-st.dataframe(df)
-
-# Cargar estaciones
+# Carga de datos y visualización inicial
 try:
-    estaciones = pd.read_csv("estaciones.csv")
+    df = pd.read_csv("estaciones.csv")
+    st.subheader("Estaciones registradas")
+    st.dataframe(df)
 
+    # Preparar datos para los cálculos
+    estaciones = df.copy()
     estaciones["latitud"] = pd.to_numeric(
         estaciones["latitud"], errors="coerce"
     )
-
     estaciones["longitud"] = pd.to_numeric(
         estaciones["longitud"], errors="coerce"
     )
-
-    estaciones = estaciones.dropna(
-        subset=["latitud", "longitud"]
-    )
+    estaciones = estaciones.dropna(subset=["latitud", "longitud"])
 
 except Exception as e:
-    print("Error cargando estaciones:", e)
+    st.error(f"Error cargando estaciones: {e}")
     estaciones = pd.DataFrame(
         columns=["nombre", "ubicacion", "latitud", "longitud"]
     )
@@ -39,7 +34,6 @@ def distancia(lat1, lon1, lat2, lon2):
     Distancia entre dos coordenadas utilizando Haversine.
     Resultado en kilómetros.
     """
-
     R = 6371
 
     lat1 = math.radians(lat1)
@@ -50,9 +44,7 @@ def distancia(lat1, lon1, lat2, lon2):
 
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(lat1)
-        * math.cos(lat2)
-        * math.sin(dlon / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
     )
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
@@ -69,24 +61,12 @@ def obtener_ruta(lat1, lon1, lat2, lon2, perfil):
     cycling  = bicicleta
     foot     = caminar
     """
+    url = f"https://router.project-osrm.org/route/v1/{perfil}/{lon1},{lat1};{lon2},{lat2}"
 
-    url = (
-        f"https://router.project-osrm.org/route/v1/"
-        f"{perfil}/{lon1},{lat1};{lon2},{lat2}"
-    )
-
-    parametros = {
-        "overview": "full",
-        "geometries": "geojson"
-    }
+    parametros = {"overview": "full", "geometries": "geojson"}
 
     try:
-        respuesta = requests.get(
-            url,
-            params=parametros,
-            timeout=10
-        )
-
+        respuesta = requests.get(url, params=parametros, timeout=10)
         datos = respuesta.json()
 
         if datos.get("code") != "Ok":
@@ -95,125 +75,121 @@ def obtener_ruta(lat1, lon1, lat2, lon2, perfil):
         ruta = datos["routes"][0]
 
         return {
-            "distancia_km": round(
-                ruta["distance"] / 1000,
-                2
-            ),
-            "tiempo_minutos": round(
-                ruta["duration"] / 60,
-                1
-            ),
-            "geometria": ruta["geometry"]
+            "distancia_km": round(ruta["distance"] / 1000, 2),
+            "tiempo_minutos": round(ruta["duration"] / 60, 1),
+            "geometria": ruta["geometry"],
         }
 
     except Exception as e:
-        print("Error OSRM:", e)
+        st.write(f"Error OSRM ({perfil}):", e)
         return None
 
 
-@app.route("/")
-def inicio():
-    return render_template("index.html")
+# Formulario de entrada para coordenadas del usuario
+st.markdown("---")
+st.header("Buscar Estaciones Cercanas")
 
+col1, col2 = st.columns(2)
+with col1:
+    latitud_usuario = st.number_input(
+        "Ingresa tu Latitud:", value=0.0, format="%.6f"
+    )
+with col2:
+    longitud_usuario = st.number_input(
+        "Ingresa tu Longitud:", value=0.0, format="%.6f"
+    )
 
-@app.route("/buscar", methods=["POST"])
-def buscar():
-
-    datos = request.get_json()
-
-    try:
-        latitud = float(datos["latitud"])
-        longitud = float(datos["longitud"])
-    except:
-        return jsonify({
-            "error": "Coordenadas inválidas"
-        }), 400
-
+if st.button("Buscar Estaciones Cercanas", type="primary"):
     if estaciones.empty:
-        return jsonify({
-            "error": "No hay estaciones cargadas."
-        }), 500
+        st.error("No hay estaciones disponibles para realizar el cálculo.")
+    elif latitud_usuario == 0.0 and longitud_usuario == 0.0:
+        st.warning("Por favor ingresa coordenadas válidas.")
+    else:
+        with st.spinner("Calculando rutas y distancias..."):
+            # Calcular distancia en línea recta
+            lista = []
 
-    # Calcular distancia en línea recta
-    lista = []
+            for _, estacion in estaciones.iterrows():
+                d = distancia(
+                    latitud_usuario,
+                    longitud_usuario,
+                    estacion["latitud"],
+                    estacion["longitud"],
+                )
 
-    for _, estacion in estaciones.iterrows():
+                lista.append(
+                    {
+                        "nombre": str(estacion["nombre"]),
+                        "ubicacion": str(estacion["ubicacion"]),
+                        "latitud": float(estacion["latitud"]),
+                        "longitud": float(estacion["longitud"]),
+                        "distancia": round(d, 2),
+                    }
+                )
 
-        d = distancia(
-            latitud,
-            longitud,
-            estacion["latitud"],
-            estacion["longitud"]
-        )
+            # Ordenar por distancia y tomar las 3 más cercanas
+            lista.sort(key=lambda x: x["distancia"])
+            tres_cercanas = lista[:3]
 
-        lista.append({
-            "nombre": str(estacion["nombre"]),
-            "ubicacion": str(estacion["ubicacion"]),
-            "latitud": float(estacion["latitud"]),
-            "longitud": float(estacion["longitud"]),
-            "distancia": round(d, 2)
-        })
+            # Modos de transporte
+            perfiles = {
+                "Vehículo": "driving",
+                "Bicicleta": "cycling",
+                "Caminar": "foot",
+            }
 
-    # Ordenar por distancia
-    lista.sort(key=lambda x: x["distancia"])
+            for estacion in tres_cercanas:
+                estacion["rutas"] = {}
 
-    # Las 3 más cercanas
-    tres = lista[:3]
+                for nombre, perfil in perfiles.items():
+                    ruta = obtener_ruta(
+                        latitud_usuario,
+                        longitud_usuario,
+                        estacion["latitud"],
+                        estacion["longitud"],
+                        perfil,
+                    )
 
-    # Modos de transporte
-    perfiles = {
-        "Vehículo": "driving",
-        "Bicicleta": "cycling",
-        "Caminar": "foot"
-    }
+                    if ruta:
+                        estacion["rutas"][nombre] = ruta
 
-    for estacion in tres:
+                # Encontrar el modo más rápido
+                if estacion["rutas"]:
+                    modo_rapido = min(
+                        estacion["rutas"],
+                        key=lambda x: estacion["rutas"][x]["tiempo_minutos"],
+                    )
+                    estacion["modo_mas_rapido"] = modo_rapido
+                    estacion["tiempo_mas_rapido"] = estacion["rutas"][
+                        modo_rapido
+                    ]["tiempo_minutos"]
+                else:
+                    estacion["modo_mas_rapido"] = "No disponible"
+                    estacion["tiempo_mas_rapido"] = None
 
-        estacion["rutas"] = {}
+            # Desplegar resultados en pantalla
+            st.subheader("Top 3 Estaciones más Cercanas")
 
-        for nombre, perfil in perfiles.items():
+            for i, est in enumerate(tres_cercanas, start=1):
+                with st.expander(
+                    f"{i}. {est['nombre']} - ({est['distancia']} km en línea recta)",
+                    expanded=(i == 1),
+                ):
+                    st.write(f"**Ubicación:** {est['ubicacion']}")
+                    st.write(
+                        f"**Modo más rápido:** {est['modo_mas_rapido']} ({est['tiempo_mas_rapido']} min)"
+                    )
 
-            ruta = obtener_ruta(
-                latitud,
-                longitud,
-                estacion["latitud"],
-                estacion["longitud"],
-                perfil
-            )
-
-            if ruta:
-                estacion["rutas"][nombre] = ruta
-
-        # Encontrar el modo más rápido
-        if estacion["rutas"]:
-
-            modo_rapido = min(
-                estacion["rutas"],
-                key=lambda x:
-                estacion["rutas"][x]["tiempo_minutos"]
-            )
-
-            estacion["modo_mas_rapido"] = modo_rapido
-
-            estacion["tiempo_mas_rapido"] = (
-                estacion["rutas"]
-                [modo_rapido]
-                ["tiempo_minutos"]
-            )
-
-        else:
-            estacion["modo_mas_rapido"] = "No disponible"
-            estacion["tiempo_mas_rapido"] = None
-
-    return jsonify({
-        "usuario": {
-            "latitud": latitud,
-            "longitud": longitud
-        },
-        "estaciones": tres
-    })
+                    st.markdown("**Detalles por medio de transporte:**")
+                    if est["rutas"]:
+                        for modo, datos_ruta in est["rutas"].items():
+                            st.write(
+                                f"- **{modo}:** {datos_ruta['distancia_km']} km | {datos_ruta['tiempo_minutos']} min"
+                            )
+                    else:
+                        st.info(
+                            "No se pudieron obtener rutas detalladas desde OSRM."
+                        )
 
 
-if __name__ == '__main__':
-    # Agrega use_reloader=False y debug=False
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+
